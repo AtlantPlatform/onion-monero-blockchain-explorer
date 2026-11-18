@@ -37,14 +37,12 @@ MicroCore::MicroCore():
 bool
 MicroCore::init(const string& _blockchain_path, network_type nt)
 {
-    int db_flags = 0;
+    // BlockchainDB expects DBF_* flags, not native LMDB MDB_* flags.
+    const int db_flags = DBF_RDONLY;
 
     blockchain_path = _blockchain_path;
 
     nettype = nt;
-
-    db_flags |= MDB_RDONLY;
-    db_flags |= MDB_NOLOCK;
 
     BlockchainDB* db = nullptr;
     db = new BlockchainLMDB();

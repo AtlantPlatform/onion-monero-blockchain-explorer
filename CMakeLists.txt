@@ -156,7 +156,6 @@ set(LIBRARIES
         easylogging
         checkpoints
         cncrypto        
-        miniupnpc
         version
         epee
         hardforks

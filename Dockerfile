@@ -4,7 +4,7 @@
 FROM ubuntu:24.04 AS builder
 
 # Set Monero branch/tag to be used for monerod compilation
-ARG MONERO_BRANCH=v0.18.4.0
+ARG MONERO_BRANCH=v0.18.5.4
 
 # Added DEBIAN_FRONTEND=noninteractive to workaround tzdata prompt on installation
 ENV DEBIAN_FRONTEND="noninteractive"
@@ -16,7 +16,6 @@ RUN apt-get update \
     git \
     build-essential \
     cmake \
-    miniupnpc \
     graphviz \
     doxygen \
     pkg-config \
@@ -54,6 +53,10 @@ RUN git clone --recursive --branch ${MONERO_BRANCH} \
 COPY . /root/onion-monero-blockchain-explorer/
 WORKDIR /root/onion-monero-blockchain-explorer/build
 RUN cmake .. && make -j"$(cat /nproc)"
+
+# Backups must use the same LMDB implementation as monerod and xmrblocks.
+RUN cc -o /root/mdb_copy /root/monero/external/db_drivers/liblmdb/mdb_copy.c \
+    /root/monero/build/release/external/db_drivers/liblmdb/liblmdb.a -pthread
 
 # Use ldd and awk to bundle up dynamic libraries for the final image.
 # monerod ships in the same image (see below), so bundle its libraries too.
@@ -96,6 +99,7 @@ COPY --chown=monero:monero --from=builder /root/onion-monero-blockchain-explorer
 # the other waits forever or hangs. Running monerod from this image gives
 # both sides the same glibc and LMDB, so start order no longer matters.
 COPY --chown=monero:monero --from=builder /root/monero/build/release/bin/monerod .
+COPY --chown=monero:monero --from=builder /root/mdb_copy .
 
 # Expose volume used for lmdb access by xmrblocks
 VOLUME /home/monero/.bitmonero

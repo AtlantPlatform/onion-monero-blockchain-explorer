@@ -44,6 +44,7 @@ extern __thread randomx_vm *main_vm_full;
 
 #include <algorithm>
 #include <limits>
+#include <stdexcept>
 #include <ctime>
 #include <future>
 #include <type_traits>
@@ -2141,7 +2142,7 @@ namespace xmreg
                 {
                     // cointbase txs have amounts in plain sight.
                     // so use amount from ringct, only for non-coinbase txs
-                    if (!is_coinbase(tx))
+                    if (!tx.is_coinbase())
                     {
 
                         // initialize with regular amount
@@ -2445,7 +2446,7 @@ namespace xmreg
                             {
                                 // cointbase txs have amounts in plain sight.
                                 // so use amount from ringct, only for non-coinbase txs
-                                if (!is_coinbase(mixin_tx))
+                                if (!mixin_tx.is_coinbase())
                                 {
                                     // initialize with regular amount
                                     uint64_t rct_amount = amount;
@@ -3780,7 +3781,7 @@ namespace xmreg
 
                     // cointbase txs have amounts in plain sight.
                     // so use amount from ringct, only for non-coinbase txs
-                    if (!is_coinbase(tx))
+                    if (!tx.is_coinbase())
                     {
 
                         bool r = decode_ringct(tx.rct_signatures,
@@ -3808,7 +3809,7 @@ namespace xmreg
                             return mstch::render(full_page, context);
                         }
 
-                    } //  if (!is_coinbase(tx))
+                    } //  if (!tx.is_coinbase())
 
                 } // if (td.is_rct())
 
@@ -4260,7 +4261,7 @@ namespace xmreg
             }
 
             uint64_t block_height{0};
-            uint64_t is_coinbase_tx = is_coinbase(tx);
+            uint64_t is_coinbase_tx = tx.is_coinbase();
             uint64_t no_confirmations{0};
 
             if (found_in_mempool == false)
@@ -5224,7 +5225,7 @@ namespace xmreg
                 {
                     // cointbase txs have amounts in plain sight.
                     // so use amount from ringct, only for non-coinbase txs
-                    if (!is_coinbase(tx))
+                    if (!tx.is_coinbase())
                     {
 
                         // initialize with regular amount
@@ -5250,7 +5251,7 @@ namespace xmreg
                         xmr_amount = rct_amount;
                         money_transfered[output_idx] = rct_amount;
 
-                    } // if (!is_coinbase(tx))
+                    } // if (!tx.is_coinbase())
 
                 } // if (mine_output && tx.version == 2)
 
@@ -5709,7 +5710,7 @@ namespace xmreg
                     {
                         // cointbase txs have amounts in plain sight.
                         // so use amount from ringct, only for non-coinbase txs
-                        if (!is_coinbase(tx))
+                        if (!tx.is_coinbase())
                         {
 
                             // initialize with regular amount
@@ -5738,7 +5739,7 @@ namespace xmreg
                             xmr_amount = rct_amount;
                             money_transfered[output_idx] = rct_amount;
 
-                        } // if (!is_coinbase(tx))
+                        } // if (!tx.is_coinbase())
 
                     } // if (mine_output && tx.version == 2)
 
@@ -5778,7 +5779,7 @@ namespace xmreg
                 {"xmr_inputs", txd.xmr_inputs},
                 {"tx_version", static_cast<uint64_t>(txd.version)},
                 {"rct_type", tx.rct_signatures.type},
-                {"coinbase", is_coinbase(tx)},
+                {"coinbase", tx.is_coinbase()},
                 {"mixin", txd.mixin_no},
                 {"extra", txd.get_extra_str()},
                 {"payment_id", (txd.payment_id != null_hash ? pod_to_hex(txd.payment_id) : "")},
@@ -6362,7 +6363,8 @@ namespace xmreg
             }
             else
             {
-                txd.hash = get_pruned_transaction_hash(tx, tx.prunable_hash);
+                if (!get_pruned_transaction_hash(tx, tx.prunable_hash, txd.hash))
+                    throw std::runtime_error("Failed to calculate pruned transaction hash");
             }
 
             // get tx public key from extra
